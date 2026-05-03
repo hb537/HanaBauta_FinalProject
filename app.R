@@ -6,7 +6,6 @@
 library(shiny)
 library(tidyverse)
 library(ggplot2)
-library(here)
 
 # ============================================================
 # CUSTOM CSS STYLING FOR PORTFOLIO
@@ -248,8 +247,9 @@ palette_usage <- c("None" = "#aed6f1", "<1hr" = "#5dade2", "1–2hr" = "#3498db"
 # ============================================================
 # DATA LOADING
 # ============================================================
-mwel_data <- read_csv(here("data", "raw", "mWEL_Data.csv"))
-hms_data  <- read_csv(here("data", "processed", "hms_processed_subset.csv"))
+mwel_data <- read_csv("data/raw/mWEL_Data.csv", show_col_types = FALSE)
+hms_data  <- read_csv("data/processed/hms_processed_subset.csv", show_col_types = FALSE)
+
 
 # ============================================================
 # DATA PREPARATION - mWEL (EDUCATORS)
@@ -282,244 +282,207 @@ hms_analysis <- hms_data %>%
 ui <- navbarPage(
   title = "Tech Engagement & Mental Health",
   portfolio_css,
-
+  
   # ==========================
   # OVERVIEW TAB
   # ==========================
   tabPanel("Overview",
-    fluidPage(
-      div(style = "max-width: 1000px; margin: 30px auto; padding: 0 20px;",
-
-        h2("Research Overview"),
-
-        p(
-          strong("Dual-Study Analysis: "),
-          "This dashboard synthesizes findings from two distinct populations studying the relationship between ",
-          "technology engagement and mental health outcomes."
-        ),
-
-        div(class = "info-card",
-          h4("Study 1: mWEL (Educators in Uganda)"),
-          p("Low-resource setting exploring technology as a professional resource for teachers and parents."),
-          span(class = "dataset-badge badge-mwel", "mWEL Dataset"),
-          tags$ul(
-            tags$li("Sample: Educators and parents in Uganda"),
-            tags$li("Tech Measure: Composite score (tech_1–tech_7)"),
-            tags$li("Outcome: GAD-7 anxiety severity"),
-            tags$li("Context: Technology may buffer anxiety through streamlined communication")
-          )
-        ),
-
-        div(class = "info-card",
-          h4("Study 2: HMS (College Students in USA)"),
-          p("National US survey examining daily internet/social media use and anxiety among adolescents/young adults."),
-          span(class = "dataset-badge badge-hms", "HMS Dataset"),
-          tags$ul(
-            tags$li("Sample: U.S. college and university students (N = 34,953 analyzed)"),
-            tags$li("Tech Measure: Daily internet/social media use (1-8 ordinal scale)"),
-            tags$li("Outcome: GAD-7 anxiety severity (0–21)"),
-            tags$li("Context: Excessive tech use may exacerbate anxiety through FOMO and social comparison")
-          )
-        ),
-
-        h3("Research Questions"),
-        tags$ul(
-          tags$li("How does technology engagement relate to anxiety severity in two distinct populations?"),
-          tags$li("Are patterns similar or different between educators (professional use) and students (personal use)?"),
-          tags$li("What mechanisms might explain tech-anxiety relationships in each context?")
-        ),
-
-        hr(),
-
-        p(style = "font-size: 12px; color: #7f8c8d;",
-          strong("Analysis Date: "), format(Sys.Date(), "%B %d, %Y"), " | ",
-          strong("Contact: "), "bauta.hana@gmail.com"
-        )
-      )
-    )
+           fluidPage(
+             div(style = "max-width: 1000px; margin: 30px auto; padding: 0 20px;",
+                 h2("Research Overview"),
+                 p(
+                   strong("Dual-Study Analysis: "),
+                   "This dashboard synthesizes findings from two distinct populations studying the relationship between ",
+                   "technology engagement and mental health outcomes."
+                 ),
+                 div(class = "info-card",
+                     h4("Study 1: mWEL (Educators in Uganda)"),
+                     p("Low-resource setting exploring technology as a professional resource for teachers and parents."),
+                     span(class = "dataset-badge badge-mwel", "mWEL Dataset"),
+                     tags$ul(
+                       tags$li("Sample: Educators and parents in Uganda"),
+                       tags$li("Tech Measure: Composite score (tech_1–tech_7)"),
+                       tags$li("Outcome: GAD-7 anxiety severity"),
+                       tags$li("Context: Technology may buffer anxiety through streamlined communication")
+                     )
+                 ),
+                 div(class = "info-card",
+                     h4("Study 2: HMS (College Students in USA)"),
+                     p("National US survey examining daily internet/social media use and anxiety among adolescents/young adults."),
+                     span(class = "dataset-badge badge-hms", "HMS Dataset"),
+                     tags$ul(
+                       tags$li("Sample: U.S. college and university students (N = 34,953 analyzed)"),
+                       tags$li("Tech Measure: Daily internet/social media use (1-8 ordinal scale)"),
+                       tags$li("Outcome: GAD-7 anxiety severity (0–21)"),
+                       tags$li("Context: Excessive tech use may exacerbate anxiety through FOMO and social comparison")
+                     )
+                 ),
+                 h3("Research Questions"),
+                 tags$ul(
+                   tags$li("How does technology engagement relate to anxiety severity in two distinct populations?"),
+                   tags$li("Are patterns similar or different between educators (professional use) and students (personal use)?"),
+                   tags$li("What mechanisms might explain tech-anxiety relationships in each context?")
+                 ),
+                 hr(),
+                 p(style = "font-size: 12px; color: #7f8c8d;",
+                   strong("Analysis Date: "), format(Sys.Date(), "%B %d, %Y"), " | ",
+                   strong("Contact: "), "bauta.hana@gmail.com"
+                 )
+             )
+           )
   ),
-
+  
   # ==========================
   # mWEL EDUCATORS TAB
   # ==========================
   tabPanel("Educators (mWEL)",
-    sidebarLayout(
-      sidebarPanel(width = 3,
-        div(class = "sidebar-panel",
-          p(class = "sidebar-label", "Filter by Age Group"),
-          selectInput("age_filter", label = NULL,
-                     choices = c("All", levels(mwel_analysis$age_group)))
-        )
-      ),
-
-      mainPanel(width = 9,
-        div(style = "padding: 20px;",
-          h2("Technology Engagement by Age (Educators)"),
-
-          plotOutput("boxplot_mwel", height = 420),
-          br(),
-
-          h3("Summary Statistics"),
-          tableOutput("summary_mwel"),
-
-          br(),
-
-          h3("Tech vs Anxiety Association"),
-          plotOutput("scatter_mwel", height = 400),
-
-          br(),
-
-          h3("Statistical Results"),
-          verbatimTextOutput("correlation_mwel"),
-
-          p(style = "font-size: 12px; color: #7f8c8d; margin-top: 15px;",
-            "Pearson correlation measures linear association; p-value indicates statistical significance (α = 0.05)."
-          )
-        )
-      )
-    )
+           sidebarLayout(
+             sidebarPanel(width = 3,
+                          div(class = "sidebar-panel",
+                              p(class = "sidebar-label", "Filter by Age Group"),
+                              selectInput("age_filter", label = NULL,
+                                          choices = c("All", levels(mwel_analysis$age_group)))
+                          )
+             ),
+             mainPanel(width = 9,
+                       div(style = "padding: 20px;",
+                           h2("Technology Engagement by Age (Educators)"),
+                           plotOutput("boxplot_mwel", height = 420),
+                           br(),
+                           h3("Summary Statistics"),
+                           tableOutput("summary_mwel"),
+                           br(),
+                           h3("Tech vs Anxiety Association"),
+                           plotOutput("scatter_mwel", height = 400),
+                           br(),
+                           h3("Statistical Results"),
+                           verbatimTextOutput("correlation_mwel"),
+                           p(style = "font-size: 12px; color: #7f8c8d; margin-top: 15px;",
+                             "Pearson correlation measures linear association; p-value indicates statistical significance (α = 0.05)."
+                           )
+                       )
+             )
+           )
   ),
-
+  
   # ==========================
   # HMS COLLEGE STUDENTS TAB
   # ==========================
   tabPanel("Students (HMS)",
-    sidebarLayout(
-      sidebarPanel(width = 3,
-        div(class = "sidebar-panel",
-          p(class = "sidebar-label", "Display Options"),
-          checkboxInput("show_lm_hms", "Show Regression Line", TRUE),
-          hr(),
-          p(style = "font-size: 12px; color: #7f8c8d;",
-            "Based on Healthy Minds Study 2024-25 (N = 34,953 with complete data)"
-          )
-        )
-      ),
-
-      mainPanel(width = 9,
-        div(style = "padding: 20px;",
-          h2("Internet/Social Media Use & Anxiety (College Students)"),
-
-          p("Violin plots show the full distribution of anxiety scores at each usage level. ",
-            "Wider sections indicate more students with that anxiety level; boxplots show median and quartiles."),
-
-          plotOutput("usage_anxiety_hms", height = 450),
-          br(),
-
-          h3("Daily Usage Categories"),
-          p("Summary statistics of GAD-7 anxiety scores stratified by daily internet/social media use categories."),
-          tableOutput("usage_stats_hms"),
-
-          br(),
-
-          h3("Regression Analysis"),
-          p("Linear regression with internet_1 (1-8 ordinal scale) as continuous predictor. ",
-            "Tests whether daily usage level significantly predicts anxiety severity."),
-
-          br(),
-
-          plotOutput("regression_plot_hms", height = 420),
-
-          br(),
-
-          verbatimTextOutput("regression_hms"),
-
-          p(style = "font-size: 12px; color: #7f8c8d; margin-top: 15px;",
-            strong("Note: "), "This matches the analysis from Checkpoint 6 (VTPEH 6270). ",
-            "The ordinal usage scale (1-8) is treated as continuous in the regression model."
-          )
-        )
-      )
-    )
+           sidebarLayout(
+             sidebarPanel(width = 3,
+                          div(class = "sidebar-panel",
+                              p(class = "sidebar-label", "Display Options"),
+                              checkboxInput("show_lm_hms", "Show Regression Line", TRUE),
+                              hr(),
+                              p(style = "font-size: 12px; color: #7f8c8d;",
+                                "Based on Healthy Minds Study 2024-25 (N = 34,953 with complete data)"
+                              )
+                          )
+             ),
+             mainPanel(width = 9,
+                       div(style = "padding: 20px;",
+                           h2("Internet/Social Media Use & Anxiety (College Students)"),
+                           p("Violin plots show the full distribution of anxiety scores at each usage level. ",
+                             "Wider sections indicate more students with that anxiety level; boxplots show median and quartiles."),
+                           plotOutput("usage_anxiety_hms", height = 450),
+                           br(),
+                           h3("Daily Usage Categories"),
+                           p("Summary statistics of GAD-7 anxiety scores stratified by daily internet/social media use categories."),
+                           tableOutput("usage_stats_hms"),
+                           br(),
+                           h3("Regression Analysis"),
+                           p("Linear regression with internet_1 (1-8 ordinal scale) as continuous predictor. ",
+                             "Tests whether daily usage level significantly predicts anxiety severity."),
+                           br(),
+                           plotOutput("regression_plot_hms", height = 420),
+                           br(),
+                           verbatimTextOutput("regression_hms"),
+                           p(style = "font-size: 12px; color: #7f8c8d; margin-top: 15px;",
+                             strong("Note: "), "This matches the analysis from Checkpoint 6 (VTPEH 6270). ",
+                             "The ordinal usage scale (1-8) is treated as continuous in the regression model."
+                           )
+                       )
+             )
+           )
   ),
-
+  
   # ==========================
   # COMPARATIVE ANALYSIS TAB
   # ==========================
   tabPanel("Comparison",
-    fluidPage(
-      div(style = "max-width: 1000px; margin: 30px auto; padding: 0 20px;",
-
-        h2("Cross-Population Comparison"),
-
-        div(class = "info-card",
-          h4("Key Comparison Points"),
-          tags$ul(
-            tags$li(
-              strong("Context: "),
-              "mWEL focuses on professional tech use (communication, work tools) while HMS examines leisure/social tech"
-            ),
-            tags$li(
-              strong("Populations: "),
-              "Educators in resource-limited settings (Uganda) vs. college students in high-income setting (USA)"
-            ),
-            tags$li(
-              strong("Mechanisms: "),
-              "Tech may buffer stress for educators through work support, but exacerbate for students through social comparison"
-            ),
-            tags$li(
-              strong("Methodological: "),
-              "Different measurement scales; mWEL uses composite score while HMS uses ordinal daily usage scale"
-            )
-          )
-        ),
-
-        h3("Expected Findings"),
-        tags$ul(
-          tags$li("mWEL: Weak or null association (tech as coping resource)"),
-          tags$li("HMS: Positive association (higher use → higher anxiety)")
-        ),
-
-        h3("Implications"),
-        p("The differential patterns across populations highlight that the tech-mental health relationship is not universal ",
-          "but rather context- and purpose-dependent. Understanding these nuances is critical for designing interventions."),
-
-        div(class = "highlight-box",
-          h4("Next Steps"),
-          p("Future analyses should examine: mediators (FOMO, social comparison), moderators (institutional support, choice), ",
-            "and temporal dynamics (longitudinal follow-up) to elucidate mechanisms and inform prevention efforts.")
-        )
-      )
-    )
+           fluidPage(
+             div(style = "max-width: 1000px; margin: 30px auto; padding: 0 20px;",
+                 h2("Cross-Population Comparison"),
+                 div(class = "info-card",
+                     h4("Key Comparison Points"),
+                     tags$ul(
+                       tags$li(
+                         strong("Context: "),
+                         "mWEL focuses on professional tech use (communication, work tools) while HMS examines leisure/social tech"
+                       ),
+                       tags$li(
+                         strong("Populations: "),
+                         "Educators in resource-limited settings (Uganda) vs. college students in high-income setting (USA)"
+                       ),
+                       tags$li(
+                         strong("Mechanisms: "),
+                         "Tech may buffer stress for educators through work support, but exacerbate for students through social comparison"
+                       ),
+                       tags$li(
+                         strong("Methodological: "),
+                         "Different measurement scales; mWEL uses composite score while HMS uses ordinal daily usage scale"
+                       )
+                     )
+                 ),
+                 h3("Expected Findings"),
+                 tags$ul(
+                   tags$li("mWEL: Weak or null association (tech as coping resource)"),
+                   tags$li("HMS: Positive association (higher use → higher anxiety)")
+                 ),
+                 h3("Implications"),
+                 p("The differential patterns across populations highlight that the tech-mental health relationship is not universal ",
+                   "but rather context- and purpose-dependent. Understanding these nuances is critical for designing interventions."),
+                 div(class = "highlight-box",
+                     h4("Next Steps"),
+                     p("Future analyses should examine: mediators (FOMO, social comparison), moderators (institutional support, choice), ",
+                       "and temporal dynamics (longitudinal follow-up) to elucidate mechanisms and inform prevention efforts.")
+                 )
+             )
+           )
   ),
-
+  
   # ==========================
   # SIMULATION TAB
   # ==========================
   tabPanel("Power Analysis",
-    sidebarLayout(
-      sidebarPanel(width = 3,
-        div(class = "sidebar-panel",
-          p(class = "sidebar-label", "Simulation Parameters"),
-
-          sliderInput("effect", "Effect Size (slope)", min = -2, max = 0, value = -0.7, step = 0.1),
-          sliderInput("sample", "Sample Size", min = 50, max = 500, value = 150, step = 10),
-          sliderInput("noise", "Noise (SD)", min = 1, max = 10, value = 4, step = 0.5)
-        )
-      ),
-
-      mainPanel(width = 9,
-        div(style = "padding: 20px;",
-          h2("Statistical Power Analysis"),
-
-          p("Explore how effect size, sample size, and measurement error affect statistical power ",
-            "to detect relationships between technology use and anxiety."),
-
-          plotOutput("sim_plot", height = 420),
-          br(),
-
-          div(class = "highlight-box",
-            h4("Power Result"),
-            textOutput("power_text")
-          ),
-
-          p(style = "font-size: 12px; color: #7f8c8d; margin-top: 15px;",
-            "Simulated data generated from normal distributions with user-specified parameters. ",
-            "P-value < 0.05 indicates statistical significance."
-          )
-        )
-      )
-    )
+           sidebarLayout(
+             sidebarPanel(width = 3,
+                          div(class = "sidebar-panel",
+                              p(class = "sidebar-label", "Simulation Parameters"),
+                              sliderInput("effect", "Effect Size (slope)", min = -2, max = 0, value = -0.7, step = 0.1),
+                              sliderInput("sample", "Sample Size", min = 50, max = 500, value = 150, step = 10),
+                              sliderInput("noise", "Noise (SD)", min = 1, max = 10, value = 4, step = 0.5)
+                          )
+             ),
+             mainPanel(width = 9,
+                       div(style = "padding: 20px;",
+                           h2("Statistical Power Analysis"),
+                           p("Explore how effect size, sample size, and measurement error affect statistical power ",
+                             "to detect relationships between technology use and anxiety."),
+                           plotOutput("sim_plot", height = 420),
+                           br(),
+                           div(class = "highlight-box",
+                               h4("Power Result"),
+                               textOutput("power_text")
+                           ),
+                           p(style = "font-size: 12px; color: #7f8c8d; margin-top: 15px;",
+                             "Simulated data generated from normal distributions with user-specified parameters. ",
+                             "P-value < 0.05 indicates statistical significance."
+                           )
+                       )
+             )
+           )
   )
 )
 
@@ -527,7 +490,7 @@ ui <- navbarPage(
 # SERVER
 # ============================================================
 server <- function(input, output) {
-
+  
   # ------ mWEL FILTERED DATA ------
   mwel_filtered <- reactive({
     if (input$age_filter == "All") {
@@ -536,9 +499,8 @@ server <- function(input, output) {
       mwel_analysis %>% filter(age_group == input$age_filter)
     }
   })
-
+  
   # ====== mWEL PLOTS ======
-
   output$boxplot_mwel <- renderPlot({
     ggplot(mwel_filtered(),
            aes(x = fct_relevel(age_group, "<25", "25–34", "35–44", "45–54", "55+"),
@@ -550,7 +512,7 @@ server <- function(input, output) {
            x = "Age Group", y = "Tech Engagement Score") +
       theme_portfolio()
   })
-
+  
   output$summary_mwel <- renderTable({
     mwel_filtered() %>%
       group_by(age_group) %>%
@@ -561,16 +523,16 @@ server <- function(input, output) {
                 .groups = "drop") %>%
       rename("Age Group" = age_group, "N" = n)
   }, striped = TRUE, hover = TRUE)
-
+  
   output$scatter_mwel <- renderPlot({
     ggplot(mwel_filtered(), aes(x = tech_score, y = GAD7_Sum1)) +
       geom_point(alpha = 0.5, size = 2.5, color = "#34495e") +
-      geom_smooth(method = "lm", color = "#00b6ff", fill = "#aed6f1", se = TRUE, size = 1.1) +
+      geom_smooth(method = "lm", formula = y ~ x, color = "#00b6ff", fill = "#aed6f1", se = TRUE, size = 1.1) +
       labs(title = "Tech Engagement vs Anxiety (mWEL Educators)",
            x = "Tech Engagement Score", y = "GAD-7 Anxiety Score") +
       theme_portfolio()
   })
-
+  
   output$correlation_mwel <- renderPrint({
     result <- cor.test(mwel_filtered()$tech_score, mwel_filtered()$GAD7_Sum1)
     cat("PEARSON CORRELATION TEST (mWEL Educators)\n")
@@ -583,9 +545,8 @@ server <- function(input, output) {
     cat("Interpretation:", ifelse(result$p.value < 0.05, "Significant", "Not significant"),
         "at α = 0.05\n")
   })
-
+  
   # ====== HMS PLOTS ======
-
   output$usage_anxiety_hms <- renderPlot({
     ggplot(hms_analysis, aes(x = fct_reorder(usage_category, internet_1),
                              y = anx_score, fill = usage_category)) +
@@ -599,7 +560,7 @@ server <- function(input, output) {
       theme_portfolio() +
       theme(axis.text.x = element_text(angle = 45, hjust = 1))
   })
-
+  
   output$usage_stats_hms <- renderTable({
     hms_analysis %>%
       group_by(usage_category) %>%
@@ -610,13 +571,12 @@ server <- function(input, output) {
                 .groups = "drop") %>%
       rename("Daily Usage Category" = usage_category, "N" = n)
   }, striped = TRUE, hover = TRUE)
-
+  
   # ====== HMS REGRESSION PLOT ======
-
   output$regression_plot_hms <- renderPlot({
     ggplot(hms_analysis, aes(x = internet_1, y = anx_score)) +
       geom_jitter(alpha = 0.2, size = 1.5, width = 0.15, color = "#34495e") +
-      geom_smooth(method = "lm", color = "#00b6ff", fill = "#aed6f1", se = TRUE, size = 1.1) +
+      geom_smooth(method = "lm", formula = y ~ x, color = "#00b6ff", fill = "#aed6f1", se = TRUE, size = 1.1) +
       labs(
         title = "Regression: Daily Internet Use Predicting Anxiety",
         subtitle = "Linear regression with 95% confidence interval",
@@ -625,23 +585,20 @@ server <- function(input, output) {
       ) +
       theme_portfolio()
   })
-
+  
   output$regression_hms <- renderPrint({
     model <- lm(anx_score ~ internet_1, data = hms_analysis)
     coef_table <- summary(model)$coefficients
     r2 <- summary(model)$r.squared
     n <- nrow(hms_analysis)
-
     cat("LINEAR REGRESSION: Daily Internet Use Predicting Anxiety\n")
     cat("===========================================================\n\n")
     cat("Sample Size (N):", n, "\n")
     cat("R-squared:", round(r2, 4),
         "(", round(r2*100, 2), "% of variance explained)\n\n")
-
     cat("COEFFICIENTS:\n")
     cat("─────────────────────────────────────────────────────────\n")
     print(coef_table, digits = 4)
-
     cat("\n\nINTERPRETATION:\n")
     cat("─────────────────────────────────────────────────────────\n")
     coef_internet <- coef_table[2, 1]
@@ -650,13 +607,11 @@ server <- function(input, output) {
     cat("  anxiety increases by", round(coef_internet, 3), "points on the GAD-7\n")
     cat("• This effect is", ifelse(pval < 0.05, "STATISTICALLY SIGNIFICANT", "NOT significant"),
         "(p =", round(pval, 4), ")\n")
-
     if (coef_internet > 0) {
       cat("• Direction: POSITIVE association (more use → higher anxiety)\n")
     } else {
       cat("• Direction: NEGATIVE association (more use → lower anxiety)\n")
     }
-
     if (r2 < 0.01) {
       cat("• Effect size: SMALL (explains <1% of variance)\n")
     } else if (r2 < 0.04) {
@@ -665,36 +620,33 @@ server <- function(input, output) {
       cat("• Effect size: MODERATE TO LARGE\n")
     }
   })
-
+  
   # ====== SIMULATION ======
-
   sim_data <- reactive({
     n <- input$sample
     b1 <- input$effect
     sigma <- input$noise
-
     tibble(
       tech = rnorm(n, mean = 3.5, sd = 1),
       anxiety = 10 + b1 * tech + rnorm(n, 0, sigma)
     )
   })
-
+  
   output$sim_plot <- renderPlot({
     ggplot(sim_data(), aes(x = tech, y = anxiety)) +
       geom_point(alpha = 0.5, size = 2, color = "#34495e") +
-      geom_smooth(method = "lm", color = "#00b6ff", fill = "#aed6f1", se = TRUE, size = 1.1) +
+      geom_smooth(method = "lm", formula = y ~ x, color = "#00b6ff", fill = "#aed6f1", se = TRUE, size = 1.1) +
       labs(title = "Simulated Data: Power Demonstration",
            x = "Technology Engagement",
            y = "Anxiety Score") +
       theme_portfolio()
   })
-
+  
   output$power_text <- renderText({
     model <- lm(anxiety ~ tech, data = sim_data())
     pval <- summary(model)$coefficients[2, 4]
     coef <- summary(model)$coefficients[2, 1]
     r2 <- summary(model)$r.squared
-
     paste0(
       "Regression Coefficient: ", round(coef, 3), " | ",
       "P-value: ", round(pval, 4), " | ",

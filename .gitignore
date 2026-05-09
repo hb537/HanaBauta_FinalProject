@@ -10,3 +10,9 @@ Icon
 .RData
 Icon
 
+.DS_Store
+.RDataTmp
+.Rhistory
+.RData
+Icon
+

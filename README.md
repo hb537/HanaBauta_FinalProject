@@ -2,8 +2,8 @@
 
 **VTPEH 6270 Final Project** | Cornell University | Spring 2026
 
-[![Shiny App](https://img.shields.io/badge/Shiny-App-blue?logo=r)](https://hbauta.shinyapps.io/application/)
-[![GitHub](https://img.shields.io/badge/GitHub-Repository-black?logo=github)](https://github.com/hb537/HanaBauta_Finalproject)
+[![Shiny App](https://img.shields.io/badge/Shiny-Live%20App-blue?logo=r)](https://hbauta.shinyapps.io/application/)
+[![Report](https://img.shields.io/badge/Report-PDF-red?logo=adobeacrobatreader)](Report/Final_Report_.pdf)
 [![Data](https://img.shields.io/badge/Data-Healthy%20Minds%20Study-green)](https://healthymindsnetwork.org/)
 
 ---
@@ -36,24 +36,37 @@ This repository contains all code and materials to fully reproduce the final rep
 ## Repository Structure
 
 ```
-HanaBauta_Finalproject/
+HanaBauta_FinalProject/
 │
-├── README.md                        # This file
-│
-├── Report/
-│   ├── Final_Report.Rmd             # RMarkdown source for the final report
-│   ├── Final_Report.pdf             # Compiled PDF output
-│   └── bib_final.bib                # Bibliography file
+├── README.md
 │
 ├── App/
-│   └── app.R                        # Shiny app (ui + server in one file)
+│   ├── app.R                                   # Shiny app (ui + server)
+│   ├── hms_subset.csv                          # Data copy for app deployment
+│   └── rsconnect/shinyapps.io/hbauta/          # shinyapps.io deployment config
+│
+├── Bibliography/
+│   └── bib_final.bib                           # BibTeX reference file
 │
 ├── Data/
-│   ├── hms_subset.csv               # Analytic subset (see Data Access below)
-│   └── codebook.md                  # Variable descriptions and coding
+│   ├── HMS Data/
+│   │   └── hms_subset.csv                      # Analytic subset used in report
+│   └── Codebook/
+│       └── HMS_24-25_Codebook.pdf              # Official HMS variable codebook
+│
+├── Figures/
+│   ├── assumption-plots-1.pdf                  # Q-Q and residuals-vs-fitted plots
+│   ├── coef-plot-1.pdf                         # Standardised coefficient forest plot
+│   ├── dist-plots-1.pdf                        # GAD-7 and internet use distributions
+│   ├── group-diff-plots-1.pdf                  # Boxplots by LGBTQ+ and first-gen
+│   ├── moderation-plots-1.pdf                  # Marginal predicted scores by subgroup
+│   └── scatter-1.pdf                           # Internet use vs. anxiety scatterplot
+│
+├── Report/
+│   └── Final_Report_.pdf                       # Compiled final report (PDF)
 │
 └── Scripts/
-    └── analysis.R                   # Standalone analysis script (optional)
+    └── _Final_Report_.Rmd                      # RMarkdown source (report + analysis)
 ```
 
 ---
@@ -62,7 +75,7 @@ HanaBauta_Finalproject/
 
 | Output | Link |
 |--------|------|
-| 📄 Final Report (PDF) | [`Report/Final_Report.pdf`](Report/Final_Report.pdf) |
+| 📄 Final Report (PDF) | [`Report/Final_Report_.pdf`](Report/Final_Report_.pdf) |
 | 🌐 Interactive Shiny App | [https://hbauta.shinyapps.io/application/](https://hbauta.shinyapps.io/application/) |
 
 ---
@@ -72,13 +85,14 @@ HanaBauta_Finalproject/
 The data used in this project come from the **Healthy Minds Study (HMS) 2024–2025**. The HMS is a restricted-access dataset available to researchers at participating institutions.
 
 - To request access: [https://healthymindsnetwork.org/research/data-for-researchers/](https://healthymindsnetwork.org/research/data-for-researchers/)
-- The analytic subset (`hms_subset.csv`) used here contains only the variables necessary for this analysis and is provided in the `Data/` folder for reproducibility within this course.
+- The analytic subset (`hms_subset.csv`) is included for reproducibility within this course context.
+- The official variable codebook is at `Data/Codebook/HMS_24-25_Codebook.pdf`.
 
 **Key variables used:**
 
 | Variable | Description |
 |----------|-------------|
-| `anx_score` | GAD-7 sum score (0–21); outcome |
+| `anx_score` | GAD-7 sum score (0–21); primary outcome |
 | `internet_1` | Self-reported daily internet/social media hours (1–8); primary exposure |
 | `lgbtq` | LGBTQ+ identity (0 = Cis-Hetero, 1 = LGBTQ+) |
 | `first_gen` | First-generation student status (0 = No, 1 = Yes) |
@@ -103,7 +117,7 @@ install.packages(c(
 ))
 ```
 
-> **Note:** The report uses `xelatex` as the LaTeX engine. Make sure a LaTeX distribution (e.g., [TinyTeX](https://yihui.org/tinytex/)) is installed:
+> **Note:** The report uses `xelatex` as the LaTeX engine. Install TinyTeX if needed:
 > ```r
 > install.packages("tinytex")
 > tinytex::install_tinytex()
@@ -114,25 +128,24 @@ install.packages(c(
 1. **Clone the repository**
    ```bash
    git clone https://github.com/hb537/HanaBauta_Finalproject.git
-   cd HanaBauta_Finalproject
+   cd HanaBauta_FinalProject
    ```
 
-2. **Update the data path** in `Report/Final_Report.Rmd` (line ~119):
+2. **Update the data path** in `Scripts/_Final_Report_.Rmd` (line ~119):
    ```r
-   hms <- read_csv("Data/hms_subset.csv")
+   hms <- read_csv("Data/HMS Data/hms_subset.csv")
    ```
 
 3. **Compile the report**
    ```r
-   rmarkdown::render("Report/Final_Report.Rmd")
+   rmarkdown::render("Scripts/_Final_Report_.Rmd")
    ```
 
 4. **Run the Shiny app locally**
    ```r
-   # Make sure hms_subset.csv is in the same directory as app.R, then:
    shiny::runApp("App/app.R")
    ```
-   Or run directly from RStudio by opening `app.R` and clicking **Run App**.
+   Or open `App/app.R` in RStudio and click **Run App**. The app reads `hms_subset.csv` from the `App/` folder.
 
 ---
 
@@ -140,10 +153,10 @@ install.packages(c(
 
 - **Descriptive statistics:** Means, SDs, and proportions for all study variables.
 - **Group comparisons:** Independent-samples t-tests (Welch's correction) for LGBTQ+ and first-generation subgroups.
-- **Regression:** Two linear regression models predicting GAD-7 score:
+- **Regression:** Two linear models predicting GAD-7 score:
   - *Model 1:* Unadjusted (internet use only)
-  - *Model 2:* Adjusted (+ age, LGBTQ+ identity, first-gen status, belonging, financial stress, PHQ-9)
-- **Moderation:** Interaction terms added to Model 2 separately for LGBTQ+ identity (Model 3a) and first-generation status (Model 3b); marginal predicted scores plotted across internet use levels.
+  - *Model 2:* Adjusted for age, LGBTQ+ identity, first-gen status, belonging, financial stress, PHQ-9
+- **Moderation:** Interaction terms added separately for LGBTQ+ identity (Model 3a) and first-generation status (Model 3b); marginal predicted scores plotted with 95% CIs.
 - **Assumption checks:** Q-Q plots, residuals-vs.-fitted plots, and variance inflation factors (VIFs).
 
 All analyses conducted in **R (version 4.x)**.
@@ -152,12 +165,13 @@ All analyses conducted in **R (version 4.x)**.
 
 ## Shiny App
 
-The interactive app accompanies this report and allows users to explore:
+The interactive app allows users to explore all major analyses from the report:
 
-- **Descriptives** — distributions of GAD-7, internet use, and PHQ-9, coloured by subgroup
-- **Group Comparisons** — box/violin plots and t-test results by LGBTQ+ or first-gen status
-- **Regression Models** — scatter plots with regression lines and standardised coefficient plots
-- **Moderation Analysis** — marginal predicted GAD-7 by internet use for each subgroup
+- **About** — Study context, research questions, and key statistics
+- **Descriptives** — Distributions of GAD-7, internet use, and PHQ-9, coloured by subgroup
+- **Group Comparisons** — Box/violin plots and Welch t-test results by LGBTQ+ or first-gen status
+- **Regression Models** — Regression lines and standardised coefficient forest plot
+- **Moderation Analysis** — Marginal predicted GAD-7 by internet use for each subgroup with 95% CI bands
 
 🔗 **[https://hbauta.shinyapps.io/application/](https://hbauta.shinyapps.io/application/)**
 
@@ -185,6 +199,6 @@ GitHub: [@hb537](https://github.com/hb537)
 
 ## AI Use Disclosure
 
-This project was completed with assistance from **Claude (Anthropic)** AI to support code development and figure formatting. All code was initially generated, reviewed and verified by the author prior to submission. All analytical and interpretive decisions reflect the author's independent judgment.
+This project was completed with assistance from **Claude (Anthropic)** AI to support code development, figure formatting, and documentation. All code was reviewed and verified by the author prior to submission. All analytical and interpretive decisions reflect the author's independent judgment.
 
 ---

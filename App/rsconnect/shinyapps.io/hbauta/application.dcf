@@ -1,0 +1,12 @@
+name: application
+title: application
+username: hbauta
+account: hbauta
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 17262536
+bundleId: 11972694
+url: https://hbauta.shinyapps.io/application/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE

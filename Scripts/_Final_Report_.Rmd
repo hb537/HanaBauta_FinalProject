@@ -1,0 +1,660 @@
+---
+title: "VTPEH 6270 Final Report"
+subtitle: "Internet Use and Anxiety Symptom Severity Among U.S. College Students"
+author: "Hana Bauta"
+date: "`r Sys.Date()`"
+
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 2
+    number_sections: true
+    latex_engine: xelatex
+    extra_dependencies: ["float"]
+
+urlcolor: black
+linkcolor: black
+citecolor: black
+
+bibliography: "/Users/hanabauta/Desktop/HanaBauta_Finalproject/Bibliography/bib_final.bib"
+
+header-includes:
+  - \usepackage{xcolor}
+  - \definecolor{burgundy}{HTML}{800020}
+  - \definecolor{lightrose}{HTML}{FAF0F2}
+  - \usepackage{titling}
+  - \usepackage{tocloft}
+  - \usepackage{booktabs}
+  - \usepackage{colortbl}
+  - \usepackage{array}
+  - \usepackage{multirow}
+  - \usepackage{hyperref}
+  - \hypersetup{colorlinks=true, linkcolor=black, urlcolor=black, citecolor=black}
+  - \pretitle{\begin{center}\LARGE\bfseries\color{burgundy}}
+  - \posttitle{\end{center}}
+  - \AtBeginDocument{\color{black}}
+  - \renewcommand{\cftsecfont}{\color{black}\bfseries}
+  - \renewcommand{\cftsecpagefont}{\color{black}}
+  - \renewcommand{\cftsubsecfont}{\color{black}}
+  - \renewcommand{\cftsubsecpagefont}{\color{black}}
+  - \setlength{\cftbeforesecskip}{6pt}
+  - \setlength{\cftbeforesubsecskip}{2pt}
+  - \renewcommand{\cftdotsep}{3}
+  - \usepackage{caption}
+  - \captionsetup{
+      font=footnotesize,
+      labelfont=bf,
+      textfont=it,
+      justification=centering
+    }
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo      = FALSE,
+  warning   = FALSE,
+  message   = FALSE,
+  fig.width  = 5,
+  fig.height = 3.5,
+  fig.align  = "center",
+  fig.pos    = "H",
+  out.extra  = ""
+)
+
+library(tidyverse)
+library(ggpubr)
+library(knitr)
+library(broom)
+library(kableExtra)
+library(car)
+library(parameters)
+library(modelsummary)
+
+# ── Shared theme
+theme_pub <- function(base_size = 10) {
+  theme_classic(base_size = base_size) +
+    theme(
+      axis.title        = element_text(size = base_size,     color = "grey20"),
+      axis.text         = element_text(size = base_size - 1, color = "grey30"),
+      axis.line         = element_line(color = "grey40",    linewidth = 0.5),
+      axis.ticks        = element_line(color = "grey40",    linewidth = 0.4),
+      panel.grid.major.y = element_line(color = "grey92",   linewidth = 0.35),
+      legend.title      = element_text(size = base_size - 1, face = "bold"),
+      legend.text       = element_text(size = base_size - 1),
+      legend.key.size   = unit(0.9, "lines"),
+      plot.title        = element_text(size = base_size,     face = "bold",
+                                       color = "grey15",    margin = margin(b = 4)),
+      plot.margin       = margin(4, 6, 4, 6)
+    )
+}
+
+# ── color palettes
+COL_BURGUNDY <- "#800020"
+COL_BLUE     <- "#4E9AF1"
+COL_ORANGE   <- "#E07B54"
+COL_GREEN    <- "#3E9B5F"
+COL_YELLOW   <- "#D4A017"
+
+pAL_LGBTQ   <- c("Cis-Hetero" = COL_BLUE,    "LGBTQ+"        = COL_ORANGE)
+pAL_FIRSTGEN <- c("Not First-Gen" = COL_GREEN, "First-Gen"    = COL_YELLOW)
+
+# ── Shared kable style
+style_table <- function(kbl_obj, n_rows, col2_width = "4.5cm") {
+  kbl_obj |>
+    kable_styling(
+      latex_options = c("hold_position", "repeat_header"),
+      full_width = FALSE, position = "center", font_size = 9
+    ) |>
+    row_spec(0, bold = TRUE, color = "white", background = COL_BURGUNDY) |>
+    row_spec(seq(1, n_rows, 2), background = "#FAF0F2") |>
+    row_spec(seq(2, n_rows, 2), background = "#FFFFFF") |>
+    column_spec(1, bold = TRUE, border_right = TRUE) |>
+    column_spec(2, width = col2_width)
+}
+
+fmt_p <- function(p) ifelse(p < 0.001, "< 0.001", as.character(round(p, 3)))
+
+# ── Data
+hms <- read_csv(
+  "/Users/hanabauta/Desktop/HanaBauta_Finalproject/Data/HMS Data/hms_subset.csv"
+)
+
+analysis_df <- hms |>
+  filter(!is.na(internet_1), !is.na(anx_score)) |>
+  mutate(
+    lgbtq     = factor(lgbtq,     labels = c("Cis-Hetero", "LGBTQ+")),
+    first_gen = factor(first_gen, labels = c("Not First-Gen", "First-Gen"))
+  )
+
+model_df <- analysis_df |>
+  filter(
+    !is.na(age), !is.na(belong1), !is.na(fincur_stress),
+    !is.na(lgbtq), !is.na(first_gen), !is.na(deprawsc)
+  )
+
+# ── Models
+m1  <- lm(anx_score ~ internet_1, data = analysis_df)
+
+m2  <- lm(anx_score ~ internet_1 + age + lgbtq + first_gen +
+            belong1 + fincur_stress + deprawsc, data = model_df)
+
+m3a <- lm(anx_score ~ internet_1 * lgbtq + age + first_gen +
+            belong1 + fincur_stress + deprawsc, data = model_df)
+
+m3b <- lm(anx_score ~ internet_1 * first_gen + age + lgbtq +
+            belong1 + fincur_stress + deprawsc, data = model_df)
+
+# ── Prediction grid
+make_grid <- function(mod, vary_var, vary_levels) {
+  base <- data.frame(
+    internet_1    = seq(1, 8, length.out = 100),
+    age           = mean(model_df$age,           na.rm = TRUE),
+    belong1       = mean(model_df$belong1,        na.rm = TRUE),
+    fincur_stress = mean(model_df$fincur_stress,  na.rm = TRUE),
+    deprawsc      = mean(model_df$deprawsc,       na.rm = TRUE),
+    lgbtq         = factor("Cis-Hetero", levels = levels(model_df$lgbtq)),
+    first_gen     = factor("Not First-Gen", levels = levels(model_df$first_gen))
+  )
+  lapply(vary_levels, function(lv) {
+    d              <- base
+    d[[vary_var]]  <- factor(lv, levels = levels(model_df[[vary_var]]))
+    pr             <- predict(mod, newdata = d, interval = "confidence")
+    d$predicted    <- pr[, "fit"]
+    d$lwr          <- pr[, "lwr"]
+    d$upr          <- pr[, "upr"]
+    d
+  }) |> bind_rows()
+}
+
+grid_lgbtq <- make_grid(m3a, "lgbtq",     levels(model_df$lgbtq))
+grid_fg    <- make_grid(m3b, "first_gen", levels(model_df$first_gen))
+```
+
+---
+
+**Data source:** Healthy Minds Study 2024-2025 (<https://healthymindsnetwork.org/>)  
+**Code & data:** <https://github.com/hb537/HanaBauta_Finalproject.git>  
+**ShinyApp:** <https://hbauta.shinyapps.io/application/>
+
+\newpage
+
+# Introduction
+
+## Background and Research Context
+
+The mental health of U.S. college students has deteriorated substantially over the past decade, with anxiety rates rising sharply [@twenge2018]. Concurrently, smartphone and social media use have become ubiquitous in this age group, raising important questions about whether digital engagement exacerbates psychological distress.
+
+Several mechanisms have been proposed. First, frequent social media engagement exposes users to social comparison processes and fear of missing out (FOMO), both associated with lower self-esteem and higher anxiety [@vannucci2017]. Second, a systematic review by @karim2020 found consistent links between problematic social media use and anxiety across diverse populations, suggesting that both the amount and nature of digital engagement matter. Third, the concept of "digital overload" — where constant online content exposure overwhelms cognitive capacity — has been linked to heightened stress responses in student populations [@tafesse2024]. Additional pathways include sleep disruption from late-night device use and passive consumption of distressing content.
+
+However, this association may not be uniform across all students. LGBTQ+ students experience disproportionately high rates of anxiety partly due to minority stress and online discrimination [@moagi2021]. First-generation college students face compounded stressors — financial insecurity and social isolation — that may amplify digital overload effects [@horne2025]. These groups represent important subpopulations where the technology-anxiety association may be most pronounced.
+
+## Research Questions
+
+1. **Primary RQ:** Is higher daily internet and social media use associated with greater anxiety symptom severity (GAD-7) among U.S. college students?
+2. **Secondary RQ:** Does this association persist after accounting for demographic characteristics, financial stress, sense of belonging, and depression severity?
+3. **Subgroup RQ:** Does the association differ by LGBTQ+ identity or first-generation student status?
+
+Based on this literature, this paper hypothesizes that (1) higher internet use will be positively associated with GAD-7 scores, (2) this will persist after covariate adjustment, and (3) the association will be stronger among LGBTQ+ and first-generation students.
+
+# Materials & Methods
+
+## Data Source and Sample
+
+Data were obtained from the **Healthy Minds Study (HMS) 2024-2025 Academic Year**, a large, nationally representative web-based survey of students at U.S. colleges and universities. Institutions recruit students via stratified random sampling from enrollment lists; selected students are invited by email to complete a validated online questionnaire. The full dataset contains 84,735 observations.
+
+Observations missing the primary exposure (`internet_1`) or outcome (`anx_score`) were removed via listwise deletion, yielding a primary analytic sample of N = 34,953 students. For adjusted models, further restriction to complete cases on all covariates produced a final model sample of N = 33,130 students. No transformations were applied to exposure or outcome variables; distributions were appropriate for linear regression according to diagnostic checks. Non-response weights were also not applied.
+
+## Key Variables
+
+**Outcome:** `anx_score` — GAD-7 sum score (range 0-21); higher scores indicate greater severity. Clinical thresholds: minimal (0-4), mild (5-9), moderate (10-14), severe (15-21).
+
+**primary exposure:** `internet_1` — self-reported average daily internet/social media hours (continuous, 1-8 hrs/day).
+
+**Covariates:** age (years), LGBTQ+ identity (binary: Cis-Hetero vs. LGBTQ+), first-generation status (binary), sense of belonging (`belong1`), financial stress (`fincur_stress`), depression severity (`deprawsc`, pHQ-9 raw score, 0-27).
+
+## Statistical Methods
+
+Descriptive statistics, including means, standard deviations, and proportions, were calculated for all study variables. Differences in mean anxiety scores across demographic subgroups were evaluated using independent-samples t-tests.
+
+To examine the relationship between internet use and anxiety severity, two linear regression models were estimated. Model 1 assessed the unadjusted association between daily internet/social media use and GAD-7 anxiety score. Model 2 added demographic and psychosocial covariates: age, LGBTQ+ identity, first-generation student status, sense of belonging, financial stress, and depression severity. Overall, linear regression was selected given the continuous nature of the GAD-7 outcome and to allow for the inclusion of multiple psychosocial covariates to control for confounding.
+ 
+To explore potential effect modification, interaction terms were added to the adjusted model separately for LGBTQ+ identity (Model 3a) and first-generation status (Model 3b). predicted anxiety scores across levels of internet use were plotted for each subgroup with 95% confidence intervals (CI), while holding other variables at their sample means.
+
+Model assumptions were evaluated using Q-Q plots, residuals-versus-fitted plots, and variance inflation factors (VIFs). Standardized regression coefficients were calculated to compare the relative strength of predictors. Statistical significance was assessed at a two-sided a = 0.05. Given N > 30,000, minor deviations from normality were expected and interpreted cautiously under the central limit theorem. Given the large sample size and the specific, hypothesis-driven nature of the analyses, a standard alpha of 0.05 was used; however, the high significance levels (p < 0.001) for primary associations suggest results are robust to multiple testing concerns.
+
+All analyses were conducted in R (version 4.x).
+
+\newpage
+
+# Results
+
+## Descriptive Overview
+
+```{r desc-table}
+desc_tbl <- analysis_df |>
+  summarise(
+    `N` = as.character(n()),
+    `Mean Age, years (SD)` = paste0(
+      round(mean(age, na.rm = TRUE), 1), " (", round(sd(age, na.rm = TRUE), 1), ")"),
+    `Mean GAD-7 Score (SD)` = paste0(
+      round(mean(anx_score, na.rm = TRUE), 2), " (", round(sd(anx_score, na.rm = TRUE), 2), ")"),
+    `Mean Internet Hrs/Day (SD)` = paste0(
+      round(mean(internet_1, na.rm = TRUE), 2), " (", round(sd(internet_1, na.rm = TRUE), 2), ")"),
+    `Mean pHQ-9 Score (SD)` = paste0(
+      round(mean(deprawsc, na.rm = TRUE), 2), " (", round(sd(deprawsc, na.rm = TRUE), 2), ")"),
+    `Mean Sense of Belonging (SD)` = paste0(
+      round(mean(belong1, na.rm = TRUE), 2), " (", round(sd(belong1, na.rm = TRUE), 2), ")"),
+    `Mean Financial Stress (SD)` = paste0(
+      round(mean(fincur_stress, na.rm = TRUE), 2), " (", round(sd(fincur_stress, na.rm = TRUE), 2), ")"),
+    `LGBTQ+ Identity, n (%)` = paste0(
+      sum(lgbtq == "LGBTQ+", na.rm = TRUE), " (",
+      round(mean(lgbtq == "LGBTQ+", na.rm = TRUE) * 100, 1), "%)"),
+    `First-Generation Student, n (%)` = paste0(
+      sum(first_gen == "First-Gen", na.rm = TRUE), " (",
+      round(mean(first_gen == "First-Gen", na.rm = TRUE) * 100, 1), "%)")
+  ) |>
+  pivot_longer(everything(), names_to = "Characteristic", values_to = "Value")
+
+kable(desc_tbl, booktabs = TRUE,
+      caption = "Descriptive statistics for the primary analytic sample (N = 34,953).") |>
+  style_table(n_rows = nrow(desc_tbl), col2_width = "5cm")
+```
+
+```{r dist-plots, fig.width=6.5, fig.height=3.2, fig.cap="Distribution of GAD-7 anxiety scores (A) and daily internet/social media use (B) in the analytic sample (N = 34,953)."}
+p_anx <- ggplot(analysis_df, aes(x = anx_score)) +
+  geom_histogram(binwidth = 1, fill = COL_BURGUNDY, color = "white", alpha = 0.9) +
+  scale_x_continuous(breaks = seq(0, 21, 3)) +
+  labs(x = "GAD-7 Anxiety Score (0-21)", y = "Count", title = "A") +
+  theme_pub()
+
+p_int <- ggplot(analysis_df, aes(x = internet_1)) +
+  geom_histogram(binwidth = 1, fill = COL_BLUE, color = "white", alpha = 0.9) +
+  scale_x_continuous(breaks = 1:8) +
+  labs(x = "Internet / Social Media Hours per Day", y = "Count", title = "B") +
+  theme_pub()
+
+ggarrange(p_anx, p_int, ncol = 2)
+```
+
+```{r severity-table}
+sev_tbl <- analysis_df |>
+  mutate(Severity = factor(
+    case_when(
+      anx_score <= 4  ~ "Minimal (0-4)",
+      anx_score <= 9  ~ "Mild (5-9)",
+      anx_score <= 14 ~ "Moderate (10-14)",
+      TRUE            ~ "Severe (15-21)"
+    ),
+    levels = c("Minimal (0-4)", "Mild (5-9)", "Moderate (10-14)", "Severe (15-21)")
+  )) |>
+  count(Severity) |>
+  mutate(percent = paste0(round(n / sum(n) * 100, 1), "%")) |>
+  rename(N = n)
+
+kable(sev_tbl, booktabs = TRUE,
+      caption = "GAD-7 anxiety symptom severity categories in the analytic sample.") |>
+  style_table(n_rows = nrow(sev_tbl), col2_width = "3cm")
+```
+
+The analytic sample included 34,953 U.S. college students. The mean GAD-7 anxiety score was 7.46 (SD = 5.72). Approximately 32.8% of students met criteria for moderate-to-severe anxiety (GAD-7 ≥ 10; Table 2). The anxiety score distribution was right-skewed, with a large proportion of minimal-to-mild cases and a meaningful tail of severe cases (Figure 1A). Students reported an average of 4.77 hours/day of internet use (SD = 1.76), concentrated in the 3-6 hour range (Figure 1B). Approximately 30.4% identified as LGBTQ+ and 17.8% were first-generation students.
+
+## Group Differences in Anxiety by Subgroup
+
+```{r group-diff-plots, fig.width=6.5, fig.height=3.5, fig.cap="GAD-7 anxiety score distributions by LGBTQ+ identity (A) and first-generation student status (B). Diamond markers indicate group means."}
+make_boxplot <- function(data, x_var, y_var = "anx_score",
+                         palette, title_label) {
+  ggplot(data, aes(x = .data[[x_var]], y = .data[[y_var]],
+                   fill = .data[[x_var]])) +
+    geom_boxplot(alpha = 0.85, outlier.size = 0.3, outlier.alpha = 0.25,
+                 width = 0.55, color = "grey30", linewidth = 0.4) +
+    stat_summary(fun = mean, geom = "point", shape = 18,
+                 size = 2.8, color = "white") +
+    scale_fill_manual(values = palette) +
+    labs(x = NULL, y = "GAD-7 Score", title = title_label) +
+    theme_pub() +
+    theme(legend.position = "none")
+}
+
+p_lgbtq <- make_boxplot(
+  filter(analysis_df, !is.na(lgbtq)),
+  x_var = "lgbtq", palette = pAL_LGBTQ, title_label = "A"
+)
+
+p_fg <- make_boxplot(
+  filter(analysis_df, !is.na(first_gen)),
+  x_var = "first_gen", palette = pAL_FIRSTGEN, title_label = "B"
+)
+
+ggarrange(p_lgbtq, p_fg, ncol = 2)
+```
+
+```{r group-diff-table}
+tt_lq <- t.test(anx_score ~ lgbtq,     data = analysis_df)
+tt_fg <- t.test(anx_score ~ first_gen, data = analysis_df)
+
+mean_sd <- function(df, group_var, group_val) {
+  df |>
+    filter(.data[[group_var]] == group_val) |>
+    summarise(m = round(mean(anx_score, na.rm = TRUE), 2),
+              s = round(sd(anx_score,   na.rm = TRUE), 2)) |>
+    mutate(lab = paste0(m, " (", s, ")")) |>
+    pull(lab)
+}
+
+grp_tbl <- tibble(
+  Comparison          = c("LGBTQ+ vs. Cis-Hetero", "First-Gen vs. Not First-Gen"),
+  `Group 1 Mean (SD)` = c(mean_sd(analysis_df, "lgbtq",     "LGBTQ+"),
+                           mean_sd(analysis_df, "first_gen", "First-Gen")),
+  `Group 2 Mean (SD)` = c(mean_sd(analysis_df, "lgbtq",     "Cis-Hetero"),
+                           mean_sd(analysis_df, "first_gen", "Not First-Gen")),
+  `Mean Diff.` = c(round(diff(rev(tt_lq$estimate)), 2),
+                    round(diff(rev(tt_fg$estimate)), 2)),
+  `95% CI` = c(
+    paste0("[", round(tt_lq$conf.int[1], 2), ", ", round(tt_lq$conf.int[2], 2), "]"),
+    paste0("[", round(tt_fg$conf.int[1], 2), ", ", round(tt_fg$conf.int[2], 2), "]")
+  ),
+  `p-value` = c(fmt_p(tt_lq$p.value), fmt_p(tt_fg$p.value))
+)
+
+kable(grp_tbl, booktabs = TRUE,
+      caption = "Independent-samples t-tests: group differences in GAD-7 anxiety score.") |>
+  kable_styling(
+    latex_options = c("hold_position", "scale_down"), # Added scale_down
+    font_size = 9, 
+    full_width = FALSE
+  ) |>
+  row_spec(0, bold = TRUE, color = "white", background = COL_BURGUNDY) |>
+  row_spec(1, background = "#FAF0F2") |>
+  row_spec(2, background = "#FFFFFF") |>
+  column_spec(1, bold = TRUE, border_right = TRUE, width = "3.5cm") |> # Added width
+  column_spec(2:3, width = "2.5cm") # Constrain the Mean (SD) columns
+```
+
+LGBTQ+ students reported substantially higher anxiety (Mean = 9.30, SD = 5.70) than cisgender-heterosexual peers (Mean = 6.65, SD = 5.54), a difference of −2.65 points (95% CI: [−2.78, −2.52], p < 0.001). First-generation students also showed elevated anxiety relative to non-first-generation peers (mean difference = −0.22 points, 95% CI: [−0.38, −0.05], p = 0.009), consistent with the hypothesis that marginalized identities are associated with greater psychological distress.
+
+## Primary Association: Internet Use and Anxiety Severity
+
+```{r scatter, fig.width=5.2, fig.height=3.8, fig.cap="Association between daily internet and social media use and GAD-7 anxiety severity (N = 34,953). points jittered for clarity. Solid line = linear fit (95\\% CI shaded); dashed line = LOESS smoother."}
+ggplot(analysis_df, aes(x = internet_1, y = anx_score)) +
+  geom_jitter(alpha = 0.04, width = 0.2, height = 0.1,
+              size = 0.5, color = COL_BURGUNDY) +
+  geom_smooth(method = "lm",    se = TRUE,  color = COL_BLUE,
+              fill = COL_BLUE,  alpha = 0.18, linewidth = 1) +
+  geom_smooth(method = "loess", se = FALSE,  color = COL_ORANGE,
+              linetype = "dashed", linewidth = 0.9) +
+  scale_x_continuous(breaks = 1:8) +
+  labs(x = "Internet / Social Media Hours per Day",
+       y = "GAD-7 Anxiety Score") +
+  theme_pub()
+```
+
+Figure 3 shows a clear positive association between daily internet use and GAD-7 anxiety scores, with higher levels of use generally corresponding to higher symptom severity. The LOESS curve closely follows the linear regression line across the full range of internet use, suggesting that the relationship is approximately linear rather than curved or threshold-based. This supports the use of a linear model for estimating the association between internet use and anxiety in the regression analyses.
+
+## Assumption Checks
+
+```{r assumption-plots, fig.width=6.5, fig.height=3.2, fig.cap="Regression diagnostics for Model 2 (adjusted). A: Q-Q plot of standardized residuals; B: residuals vs. fitted values with LOESS smoother."}
+aug2 <- augment(m2)
+
+p_qq <- ggplot(aug2, aes(sample = .std.resid)) +
+  stat_qq(alpha = 0.08, size = 0.4, color = COL_BURGUNDY) +
+  stat_qq_line(color = COL_BLUE, linewidth = 0.9) +
+  labs(x = "Theoretical Quantiles", y = "Standardized Residuals", title = "A") +
+  theme_pub()
+
+p_rvf <- ggplot(aug2, aes(x = .fitted, y = .std.resid)) +
+  geom_point(alpha = 0.05, size = 0.4, color = COL_BURGUNDY) +
+  geom_hline(yintercept = 0, color = COL_BLUE, linewidth = 0.8) +
+  geom_smooth(method = "loess", se = FALSE, color = COL_ORANGE,
+              linetype = "dashed", linewidth = 0.8) +
+  labs(x = "Fitted Values", y = "Standardized Residuals", title = "B") +
+  theme_pub()
+
+ggarrange(p_qq, p_rvf, ncol = 2)
+```
+
+```{r vif-table}
+label_map <- c(
+  "internet_1"         = "Internet Hours/Day",
+  "age"                = "Age",
+  "lgbtqLGBTQ+"        = "LGBTQ+ Identity",
+  "first_genFirst-Gen" = "First-Gen Status",
+  "belong1"            = "Sense of Belonging",
+  "fincur_stress"      = "Financial Stress",
+  "deprawsc"           = "pHQ-9 Depression Score"
+)
+
+vif_tbl <- tibble(
+  predictor = names(vif(m2)),
+  VIF       = round(vif(m2), 2)
+) |>
+  mutate(predictor = ifelse(predictor %in% names(label_map), label_map[predictor], predictor))
+
+kable(vif_tbl, booktabs = TRUE,
+      caption = "Variance Inflation Factors (VIF) for Model 2 predictors. VIF > 5 indicates concerning multicollinearity.") |>
+  style_table(n_rows = nrow(vif_tbl), col2_width = "2cm")
+```
+
+Overall, diagnostic plots indicated that linearity and homoscedasticity assumptions were reasonably satisfied (Figure 4). Mild tail deviations in the Q-Q plot are expected given the bounded, right-skewed outcome; with N > 33,000 the central limit theorem ensures robust inference. The residuals-vs.-fitted plot shows approximately constant spread with no systematic curvature, and all VIFs were below 5 (Table 4), confirming no problematic multicollinearity.
+
+\newpage
+
+## Regression Results
+
+```{r reg-table, results='asis'}
+coef_map <- c(
+  "(Intercept)"         = "Intercept",
+  "internet_1"          = "Internet Hours/Day",
+  "age"                 = "Age",
+  "lgbtqLGBTQ+"         = "LGBTQ+ Identity (ref: Cis-Hetero)",
+  "first_genFirst-Gen"  = "First-Gen Status (ref: Not First-Gen)",
+  "belong1"             = "Sense of Belonging",
+  "fincur_stress"       = "Financial Stress",
+  "deprawsc"            = "pHQ-9 Depression Score"
+)
+
+gof_map <- tribble(
+  ~raw,            ~clean,        ~fmt,
+  "nobs",          "N",           0,
+  "r.squared",     "R\u00b2",     3,
+  "adj.r.squared", "Adj. R\u00b2", 3
+)
+
+modelsummary(
+  list("Model 1: Unadjusted" = m1, "Model 2: Adjusted" = m2),
+  coef_map   = coef_map,
+  gof_map    = gof_map,
+  statistic  = "conf.int",
+  conf_level = 0.95,
+  stars      = c("*" = .05, "**" = .01, "***" = .001),
+  output     = "latex",
+  title      = "Linear regression models predicting GAD-7 anxiety score. 95\\% CIs in brackets.",
+  notes      = "Reference categories: LGBTQ+ identity = Cis-Hetero; First-Gen = Not First-Gen.",
+  booktabs   = TRUE,
+  escape     = FALSE
+)
+```
+
+**Model 1 (Unadjusted).** Each additional hour of daily internet use was associated with a 0.512-point increase in GAD-7 score (95% CI: [0.478, 0.546], p < 0.001). The unadjusted model explained 2.5% of variance in anxiety (R² = 0.025).
+
+**Model 2 (Adjusted).** After adjustment for all covariates, the internet-anxiety association was attenuated but remained statistically significant: each additional hour per day was associated with a 0.047-point increase in GAD-7 score (95% CI: [0.022, 0.072], p < 0.001). This attenuation indicates that part of the crude association reflects confounding by psychosocial factors. Depression severity (pHQ-9) was the strongest positive predictor; higher sense of belonging was associated with lower anxiety. LGBTQ+ identity remained independently associated with elevated anxiety after adjustment. Adjusted R² = 0.558.
+
+\newpage
+
+### Standardized Effect Sizes
+
+```{r std-coefs-table}
+param_map <- c(
+  "internet_1"         = "Internet Hours/Day",
+  "age"                = "Age",
+  "lgbtqLGBTQ+"        = "LGBTQ+ Identity",
+  "first_genFirst-Gen" = "First-Gen Status",
+  "belong1"            = "Sense of Belonging",
+  "fincur_stress"      = "Financial Stress",
+  "deprawsc"           = "pHQ-9 Depression Score"
+)
+
+std_coefs <- standardize_parameters(m2) |>
+  as_tibble() |>
+  rename(parameter = any_of(c("Parameter", "term", "ParameterName"))) |>
+  filter(parameter != "(Intercept)") |>
+  mutate(
+    parameter = ifelse(parameter %in% names(param_map),
+                       param_map[parameter],
+                       parameter),
+    Std_Coefficient = round(Std_Coefficient, 3),
+    CI_low  = round(CI_low, 3),
+    CI_high = round(CI_high, 3)
+  ) |>
+  arrange(desc(abs(Std_Coefficient))) |>
+  select(
+    predictor = parameter,
+    `Std. Beta` = Std_Coefficient,
+    `95% CI Low` = CI_low,
+    `95% CI High` = CI_high
+  )
+
+kable(std_coefs, booktabs = TRUE,
+      caption = "Standardized regression coefficients from Model 2, ordered by absolute effect size.") |>
+  style_table(n_rows = nrow(std_coefs), col2_width = "4cm")
+```
+
+```{r coef-plot, fig.width=5.5, fig.height=3.5, fig.cap="Standardized regression coefficients from Model 2 with 95\\% confidence intervals. Burgundy = positive association; blue = negative association."}
+std_coefs |>
+  mutate(predictor = fct_reorder(predictor, `Std. Beta`),
+         Direction = factor(`Std. Beta` > 0, levels = c(TRUE, FALSE))) |>
+  ggplot(aes(x = `Std. Beta`, y = predictor, color = Direction)) +
+  geom_vline(xintercept = 0, linetype = "dashed",
+             color = "grey55", linewidth = 0.5) +
+  geom_errorbarh(aes(xmin = `95% CI Low`, xmax = `95% CI High`),
+                 height = 0.28, linewidth = 0.55) +
+  geom_point(size = 2.6) +
+  scale_color_manual(values = c("TRUE" = COL_BURGUNDY, "FALSE" = COL_BLUE),
+                      guide = "none") +
+  labs(x = "Standardized Beta Coefficient", y = NULL) +
+  theme_pub()
+```
+
+Standardized coefficients (Table 6; Figure 5) confirm that pHQ-9 depression severity demonstrated the strongest association with anxiety, followed by sense of belonging (negative direction) and financial stress. Internet use showed a smaller but independent standardized effect, positioning digital engagement as one component within a broader psychosocial risk landscape rather than a primary driver of anxiety symptom severity.
+
+\newpage
+
+## Moderation Analyses
+
+```{r moderation-table}
+int_tbl <- bind_rows(
+  tidy(m3a, conf.int = TRUE) |>
+    filter(grepl("^internet_1$|lgbtqLGBTQ\\+$|internet_1:lgbtqLGBTQ\\+", term)) |>
+    mutate(Model = "Model 3a: Internet \u00d7 LGBTQ+"),
+  tidy(m3b, conf.int = TRUE) |>
+    filter(grepl("^internet_1$|First-Gen$|internet_1:first_genFirst-Gen", term)) |>
+    mutate(Model = "Model 3b: Internet \u00d7 First-Gen")
+) |>
+  mutate(
+    term = case_when(
+      term == "internet_1"                     ~ "Internet Hours/Day",
+      term == "lgbtqLGBTQ+"                    ~ "LGBTQ+ Identity",
+      term == "internet_1:lgbtqLGBTQ+"         ~ "Internet \u00d7 LGBTQ+ (interaction)",
+      term == "first_genFirst-Gen"             ~ "First-Gen Status",
+      term == "internet_1:first_genFirst-Gen"  ~ "Internet \u00d7 First-Gen (interaction)",
+      TRUE ~ term
+    ),
+    estimate  = round(estimate,  3),
+    conf.low  = round(conf.low,  3),
+    conf.high = round(conf.high, 3),
+    p.value   = fmt_p(p.value)
+  ) |>
+  select(Model,
+         Term     = term,
+         Beta     = estimate,
+         `CI Low` = conf.low,
+         `CI High`= conf.high,
+         p        = p.value)
+
+kable(int_tbl, booktabs = TRUE,
+      caption = "Key terms from interaction models (Models 3a and 3b). Beta = unstandardized regression coefficient.") |>
+  kable_styling(latex_options = "hold_position", font_size = 9,
+                full_width = FALSE) |>
+  row_spec(0, bold = TRUE, color = "white", background = COL_BURGUNDY) |>
+  row_spec(seq(1, nrow(int_tbl), 2), background = "#FAF0F2") |>
+  row_spec(seq(2, nrow(int_tbl), 2), background = "#FFFFFF") |>
+  column_spec(1, bold = TRUE) |>
+  collapse_rows(columns = 1, latex_hline = "major")
+```
+
+```{r moderation-plots, fig.width=6.5, fig.height=3.5, fig.cap="Marginal predicted GAD-7 scores across internet use levels by subgroup (Models 3a and 3b). All other covariates held at sample means. Shaded bands = 95\\% confidence intervals."}
+make_modplot <- function(grid, color_var, palette, title_label) {
+  ggplot(grid, aes(x = internet_1, y = predicted,
+                   color = .data[[color_var]],
+                   fill   = .data[[color_var]])) +
+    geom_ribbon(aes(ymin = lwr, ymax = upr), alpha = 0.13, color = NA) +
+    geom_line(linewidth = 1) +
+    scale_color_manual(values = palette) +
+    scale_fill_manual(values   = palette) +
+    scale_x_continuous(breaks  = 1:8) +
+    labs(x = "Internet Hours/Day", y = "predicted GAD-7",
+         color = NULL, fill = NULL, title = title_label) +
+    theme_pub() +
+    theme(legend.position = "bottom",
+          legend.margin   = margin(t = 2))
+}
+
+p_mod1 <- make_modplot(grid_lgbtq, "lgbtq",     pAL_LGBTQ,    "A")
+p_mod2 <- make_modplot(grid_fg,    "first_gen", pAL_FIRSTGEN, "B")
+
+ggarrange(p_mod1, p_mod2, ncol = 2)
+```
+
+**LGBTQ+ moderation.** The interaction between internet use and LGBTQ+ identity was not statistically significant (B = −0.038, 95% CI: [−0.091, 0.014], p = 0.152). Figure 6A shows uniformly higher predicted anxiety for LGBTQ+ students across all levels of internet use, but broadly parallel slopes, suggesting the magnitude of the internet-anxiety gradient did not significantly differ by sexual and gender identity after full covariate adjustment.
+
+**First-generation moderation.** The interaction between internet use and first-generation status was statistically significant (B = 0.060, 95% CI: [0.002, 0.118], p = 0.041). First-generation students showed a steeper internet-anxiety gradient (Figure 6B), consistent with the hypothesis that compounded academic, financial, and social stressors amplify the psychological burden of high digital engagement in this population.
+
+\newpage
+
+# Discussion
+
+## Summary of Findings
+
+This study looked at whether internet and social media use is related to anxiety symptoms among 34,953 U.S. college students in the HMS 2024–2025 dataset. Overall, there was a clear pattern: students who reported spending more time online tended to report higher anxiety scores on the GAD-7 scale. In the simplest model, each additional hour of internet use was associated with about a 0.51-point increase in anxiety score. After accounting for other factors like depression, financial stress, sense of belonging, age, LGBTQ+ identity, and first-generation status, the relationship became smaller but still statistically significant (about 0.05 points per additional hour). In other words, the association didn’t disappear once we accounted for broader life circumstances—it just became more modest.
+
+A big part of the reduction from the first to the fully adjusted model seems to come from overlapping mental health factors, especially depression. Depression was the strongest predictor of anxiety in the model, which matches what we already know from prior research on how strongly these conditions co-occur. Even so, internet use still showed an independent association with anxiety after adjusting for depression, suggesting it isn’t simply a reflection of shared underlying distress.
+
+When we look at all predictors together, internet use is not the biggest driver of anxiety, but it does sit meaningfully within a broader set of stress-related factors like financial strain, belonging, and depression symptoms. This supports a more nuanced interpretation: digital engagement is one piece of a larger psycho-social analysis rather than the central cause of anxiety.
+
+## Relation to Prior Literature
+
+These results are broadly consistent with earlier studies, while adding some important context. Vannucci et al. (2017) found similar dose-response patterns between social media use and anxiety in young adults, and Karim et al. (2020) reported consistent associations across multiple populations in their systematic review. What this study adds is scale and adjustment. With nearly 35,000 students and a clinically validated anxiety measure (GAD-7), the findings are more stable and better able to account for confounding factors like depression and financial stress than many earlier single-campus studies. That said, it’s important not to over-interpret the size of the effect. With such a large sample, even very small effects become statistically significant. The adjusted effect of 0.047 points per additional hour of internet use is small at the individual level. But across a population where students are spending 4–6+ hours per day online, even small shifts could add up to a meaningful public health burden.
+
+## Considerations
+
+There are several plausible ways internet use could be connected to anxiety. One is through social comparison and FOMO—seeing curated versions of others’ lives can increase worry and lower self-esteem, as described by Vannucci et al. (2017). Another is sleep disruption: heavy or late-night screen use can interfere with sleep, and poor sleep is strongly linked to anxiety. There’s also the content itself. Constant exposure to stressful news, conflict or emotionally charged posts may keep the body in a more activated, “on edge” state, consistent with what Tafesse et al. (2024) describe as digital overload. 
+
+For LGBTQ+ students, these dynamics may be intensified. Online environments can provide community, but they can also expose users to harassment or discrimination, which can reinforce minority stress rather than relieve it (Moagi et al. 2021). Finally, the subgroup results suggest that first-generation students may experience a stronger link between internet use and anxiety. This could reflect overlapping pressures —financial stress, academic demands, and social adjustment— that make heavy online engagement more psychologically taxing in context.
+
+## Limitations
+
+Several limitations warrant consideration. First, the cross-sectional design prevents causal inference or the establishment of temporal ordering. Higher internet use may contribute to anxiety, but students with elevated anxiety may also increase online activity as avoidance behavior — a bi-directional relationship that cannot be separated here. Second, all variables were self-reported, introducing potential recall and social-desirability biases. Third, `internet_1` captures total screen time without distinguishing between academic, social, passive, or active engagement — distinctions with meaningfully different psychological implications. Fourth, list-wise deletion for missing covariates may introduce bias if data are not missing completely at random. Fifth, non-response weights were not applied, which may limit generalizability. Finally, despite the extensive covariates list, confounding from unmeasured variables (e.g. loneliness, sleep quality, stressful life events) cannot be ruled out.
+
+These findings suggest that daily internet and social media engagement is an independent correlation of anxiety symptom severity among U.S. college students, over and above the contribution of depression/psychosocial stress. Universities may benefit from integrating digital wellness programming into broader campus mental health initiatives. Particular attention should be directed toward LGBTQ+ and first-generation students, who carry disproportionate anxiety burden and may face additional online-specific stressors.
+
+# Conclusion
+
+This study found that higher daily internet and social media use was significantly and independently associated with greater GAD-7 anxiety severity among U.S. college students (N = 34,953), with each additional hour per day associated with a 0.047-point increase in anxiety score after full covariate adjustment (95% CI: [0.022, 0.072]). Depression severity demonstrated the strongest independent association with anxiety, situating internet engagement as one component of a broader psychosocial risk landscape. Moderation analyses revealed subgroup-specific patterns, with a steeper internet-anxiety gradient observed for first-generation students, warranting targeted digital wellness interventions for this group. These findings add to the literature on technology and student mental health, and support the integration of digital wellness strategies into campus-based mental health programming.
+
+
+## Code and Data Availability
+
+**Code & data:**
+The subset data, codebook, analysis scripts, and this RMarkdown file are available at:  
+<https://github.com/hb537/HanaBauta_Finalproject.git>
+
+---
+**Data source:** Healthy Minds Study 2024-2025 (<https://healthymindsnetwork.org/>)  
+**ShinyApp:** <https://hbauta.shinyapps.io/application/>
+
+# AI Use Disclosure Statement
+
+This report was completed with assistance from Claude (Anthropic) AI to support code development and the creation of publication-ready figures and tables. All code was reviewed and verified by the author prior to submission, and all analytical and interpretive decisions reflect the author’s independent judgment.
+
+\newpage
+
+# References

@@ -185,11 +185,6 @@ GitHub: [@hb537](https://github.com/hb537)
 
 ## AI Use Disclosure
 
-This project was completed with assistance from **Claude (Anthropic)** AI to support code development, figure formatting, and README drafting. All code was reviewed and verified by the author prior to submission. All analytical and interpretive decisions reflect the author's independent judgment.
+This project was completed with assistance from **Claude (Anthropic)** AI to support code development and figure formatting. All code was initially generated, reviewed and verified by the author prior to submission. All analytical and interpretive decisions reflect the author's independent judgment.
 
 ---
-
-## License
-
-This repository is shared for academic purposes as part of VTPEH 6270. The HMS data subset is not to be redistributed beyond this course context. Please contact the [Healthy Minds Network](https://healthymindsnetwork.org/) directly to access the full dataset.
-

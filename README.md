@@ -125,28 +125,10 @@ install.packages(c(
 
 ### Steps
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/hb537/HanaBauta_Finalproject.git
-   cd HanaBauta_FinalProject
-   ```
-
-2. **Update the data path** in `Scripts/_Final_Report_.Rmd` (line ~119):
-   ```r
-   hms <- read_csv("Data/HMS Data/hms_subset.csv")
-   ```
-
-3. **Compile the report**
-   ```r
-   rmarkdown::render("Scripts/_Final_Report_.Rmd")
-   ```
-
-4. **Run the Shiny app locally**
-   ```r
-   shiny::runApp("App/app.R")
-   ```
-   Or open `App/app.R` in RStudio and click **Run App**. The app reads `hms_subset.csv` from the `App/` folder.
-
+1. Clone the repository
+2. Compile the report
+3. Run the Shiny app locally
+Or open App/app.R in RStudio and click Run App.
 ---
 
 ## Statistical Methods Summary

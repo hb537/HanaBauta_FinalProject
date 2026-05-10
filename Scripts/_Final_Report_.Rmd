@@ -16,7 +16,7 @@ urlcolor: black
 linkcolor: black
 citecolor: black
 
-bibliography: "/Users/hanabauta/Desktop/HanaBauta_Finalproject/Bibliography/bib_final.bib"
+bibliography: "../Bibliography/bib_final.bib"
 
 header-includes:
   - \usepackage{xcolor}

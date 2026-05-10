@@ -115,9 +115,7 @@ style_table <- function(kbl_obj, n_rows, col2_width = "4.5cm") {
 fmt_p <- function(p) ifelse(p < 0.001, "< 0.001", as.character(round(p, 3)))
 
 # ── Data
-hms <- read_csv(
-  "/Users/hanabauta/Desktop/HanaBauta_Finalproject/Data/HMS Data/hms_subset.csv"
-)
+hms <- read_csv("../Data/HMS Data/hms_subset.csv")
 
 analysis_df <- hms |>
   filter(!is.na(internet_1), !is.na(anx_score)) |>
